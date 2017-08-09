@@ -1,0 +1,75 @@
+#Classification
+
+#Logistic Reg
+logistic <- glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data=Smarket, family=binomial)   #Logistic Regression
+summary(logistic)
+coef(logistic)
+summary(logistic)$coef                                 # Gives coefficients with details                
+summary(logistic)$coef[,4]                             # Gives p values only
+predicted_prob <- predict(logistic, type="response")   # type='reponse' tells to output probabilities for training data
+predicted_prob
+contrasts(Direction)
+final_prediction <- rep("Down", 1250)                  # Classify predicted probabilities into "Up" and "Down"
+final_prediction[predicted_prob>0.5] <- "Up"           # based on specified threshold
+table(final_prediction, Direction)                     # Creates confusion matrix
+
+train <- (Year<2005)                                   # Create training data indicator from 2001-2004
+Smarket.2005 <- Smarket[!train,]                       # Create testing data for 2005                      
+dim(Smarket.2005)
+Direction.2005 <- Direction[!train]                    # Dependent variable subset for 2005 for confusion matrix
+
+logistic <- glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data=Smarket, family=binomial, subset=train)
+predicted_prob <- predict(logistic, Smarket.2005, type="response")
+predicted_prob
+final_prediction <- rep("Down", 252)
+final_prediction[predicted_prob>0.5] <- "Up"           
+table(final_prediction, Direction.2005)                     
+mean(final_prediction == Direction.2005)               # Accuracy
+mean(final_prediction != Direction.2005)               # Error Rate
+
+predict(logistic, newdata=data.frame(Lag1=c(1.2,1.5), Lag2=c(1.1,-0.8)), type="response")      # For prediction
+
+#LDA
+library(MASS)
+lda_model <- lda(Direction~Lag1+Lag2, data=Smarket, subset=train)
+lda_model
+plot(lda_model)                                        # plot of linear discriminants using coefficients
+lda_predict <- predict(lda_model, Smarket.2005)        # predicted probabilities
+lda_final <- lda_predict$class                         # Class associations from lda
+table(lda_final, Direction.2005)                       # Confusion matrix
+mean(lda_final == Direction.2005)                      # Accuracy
+
+#QDA
+qda_model <- qda(Direction~Lag1+Lag2, data=Smarket, subset=train)
+qda_model
+qda_predict <- predict(qda_model, Smarket.2005) 
+qda_final <- qda_predict$class
+table(qda_final, Direction.2005)                       # Confusion matrix
+mean(qda_final == Direction.2005)                      # Accuracy
+
+#KNN
+library(class)
+train.X <- cbind(Lag1, Lag2) [train,]                  # matrix containing predictors in training data
+test.X <- cbind(Lag1, Lag2) [!train,]                  # matrix containing predictors in test data
+train.Direction <- Direction [train]                   # vector containing class labels for training data
+set.seed(1)
+knn_model <- knn(train.X, test.X, train.Direction, k=1)
+table(knn_model, Direction.2005)
+knn_model <- knn(train.X, test.X, train.Direction, k=3)    # trying k=3
+table(knn_model, Direction.2005)
+
+#Example
+dim(Caravan)
+head(Caravan)
+attach(Caravan)
+summary(Purchase)
+standardize <- scale(Caravan[,-86])                    # standardize variables for KNN (exclude class variable)   
+test <- 1:1000
+train.X <- standardize[-test,]
+test.X <- standardize[test,]
+train.Y <- Purchase[-test]
+test.Y <- Purchase[test]
+knn.pred <- knn(train.X, test.X, train.Y, k=1)
+mean(test.Y != knn.pred)
+mean(test.Y != "No")
+table(knn.pred, test.Y)
